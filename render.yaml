@@ -1,0 +1,35 @@
+# One-click deployment on Render. The two things that matter for this service are the
+# persistent disk (SQLite) and the fact that it is a web service rather than a cron job or
+# a serverless function: Meta delivers webhooks to it at any moment.
+services:
+  - type: web
+    name: cascade
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter
+    healthCheckPath: /health
+    disk:
+      name: cascade-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: DATABASE_PATH
+        value: /data/cascade.db
+      - key: PUBLIC_URL
+        sync: false
+      - key: META_APP_SECRET
+        sync: false
+      - key: META_VERIFY_TOKEN
+        sync: false
+      - key: IG_ACCOUNT_ID
+        sync: false
+      - key: IG_ACCESS_TOKEN
+        sync: false
+      - key: WA_PHONE_NUMBER_ID
+        sync: false
+      - key: WA_ACCESS_TOKEN
+        sync: false
+      - key: CASCADE_API_KEY
+        generateValue: true

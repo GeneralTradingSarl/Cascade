@@ -61,6 +61,38 @@ npm start
 Point the Meta webhooks at `https://your-host/webhooks/instagram` and
 `https://your-host/webhooks/whatsapp`, and import the three files in `workflows/` into n8n.
 
+## Deploying
+
+**Cascade is a server, not a serverless function**, and the distinction is not academic:
+
+- it holds a SQLite file that must survive a restart,
+- it drains a job queue on an interval between requests,
+- it receives Meta webhooks at unpredictable times and must answer within seconds.
+
+A serverless platform gives none of those: no persistent filesystem, no process between
+invocations, and a cold start in front of every webhook. Deploying this to Vercel produces
+exactly what you would expect, `FUNCTION_INVOCATION_FAILED`, and that is the platform being
+right rather than the code being broken.
+
+What to use instead, in order of least effort:
+
+| Host | How |
+|---|---|
+| Render | `render.yaml` is in the repo: new Blueprint, point it at the fork, fill the secrets |
+| Railway / Fly.io | the `Dockerfile` is all either needs |
+| Any VPS | `docker build -t cascade . && docker run -v /srv/cascade:/data --env-file .env -p 8080:8080 cascade` |
+
+The webhook URL you register with Meta is then `https://<your-host>/webhooks/instagram` and
+`https://<your-host>/webhooks/whatsapp`, and both need real TLS, which every host above
+terminates for you.
+
+### The console as a static demo
+
+`demo/` is a snapshot of the console served as plain files, with the API responses captured
+from a seeded run. That part *is* deployable anywhere static, including Vercel, and
+`vercel.json` points at it. It exists so the interface can be shown without exposing a live
+pipeline, and it is labelled as a snapshot on the page itself.
+
 ## How the pieces split
 
 **n8n owns the parts that change weekly**: which content source, which model writes the
