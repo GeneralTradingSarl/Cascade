@@ -1,0 +1,111 @@
+{
+  "name": "Cascade 02 · Qualified leads to WhatsApp",
+  "nodes": [
+    {
+      "parameters": { "rule": { "interval": [{ "field": "minutes", "minutesInterval": 15 }] } },
+      "id": "schedule",
+      "name": "Every 15 minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-560, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.CASCADE_URL }}/api/leads",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "stage", "value": "qualified" },
+            { "name": "minScore", "value": "60" }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "x-cascade-key", "value": "={{ $env.CASCADE_API_KEY }}" }] },
+        "options": {}
+      },
+      "id": "fetch",
+      "name": "Fetch qualified leads",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-340, 300]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "leads",
+        "options": {}
+      },
+      "id": "split",
+      "name": "One item per lead",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [-120, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "version": 2 },
+          "conditions": [
+            { "leftValue": "={{ $json.phone }}", "rightValue": "", "operator": { "type": "string", "operation": "notEmpty" } },
+            { "leftValue": "={{ $json.consent }}", "rightValue": "none", "operator": { "type": "string", "operation": "notEquals" } },
+            { "leftValue": "={{ $json.opted_out_at }}", "rightValue": "", "operator": { "type": "object", "operation": "empty" } }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "gate",
+      "name": "Phone + consent + not opted out",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [100, 300],
+      "notes": "Belt and braces. Cascade refuses a non-consenting send anyway, but the workflow should not be the thing that tries."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CASCADE_URL }}/api/leads/{{ $json.id }}/outreach",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-cascade-key", "value": "={{ $env.CASCADE_API_KEY }}" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ body: 'Hi ' + ($json.name || 'there') + ', thanks for reaching out on Instagram. Here is the information you asked for. Happy to answer any question.', templateParameters: [$json.name || 'there'] }) }}",
+        "options": { "batching": { "batch": { "batchSize": 5, "batchInterval": 2000 } } }
+      },
+      "id": "outreach",
+      "name": "Send through Cascade",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [340, 260],
+      "notes": "Batched at 5 per 2s. Cascade decides free-form vs template from the 24 hour window; this workflow never talks to the WhatsApp API directly."
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={{ JSON.stringify({ lead_id: $('One item per lead').item.json.id, skipped: true, reason: 'missing phone, consent, or opted out' }) }}",
+        "options": {}
+      },
+      "id": "skipped",
+      "name": "Record skip",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [340, 420]
+    }
+  ],
+  "connections": {
+    "Every 15 minutes": { "main": [[{ "node": "Fetch qualified leads", "type": "main", "index": 0 }]] },
+    "Fetch qualified leads": { "main": [[{ "node": "One item per lead", "type": "main", "index": 0 }]] },
+    "One item per lead": { "main": [[{ "node": "Phone + consent + not opted out", "type": "main", "index": 0 }]] },
+    "Phone + consent + not opted out": {
+      "main": [
+        [{ "node": "Send through Cascade", "type": "main", "index": 0 }],
+        [{ "node": "Record skip", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "tags": ["cascade"]
+}

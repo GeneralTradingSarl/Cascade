@@ -1,0 +1,131 @@
+{
+  "name": "Cascade 01 · Content brief to Instagram",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "hours", "hoursInterval": 4 }] }
+      },
+      "id": "schedule",
+      "name": "Every 4 hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-560, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.CONTENT_SOURCE_URL }}",
+        "options": { "response": { "response": { "fullResponse": false } } }
+      },
+      "id": "brief",
+      "name": "Fetch next brief",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-340, 300],
+      "notes": "Airtable, Notion, Google Sheets: whatever holds the content calendar. It must return one item with topic, angle and media urls."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "version": 2 },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.media_urls }}",
+              "rightValue": "",
+              "operator": { "type": "array", "operation": "notEmpty" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "has-media",
+      "name": "Has media?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [-120, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LLM_ENDPOINT }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "authorization", "value": "=Bearer {{ $env.LLM_API_KEY }}" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $env.LLM_MODEL, max_tokens: 400, messages: [{ role: 'user', content: 'Write an Instagram caption in the brand voice. Topic: ' + $json.topic + '. Angle: ' + $json.angle + '. End with one question that invites a comment, and add 5 relevant hashtags. Plain text only.' }] }) }}",
+        "options": {}
+      },
+      "id": "caption",
+      "name": "Draft caption",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [120, 200],
+      "notes": "Provider-agnostic on purpose: point LLM_ENDPOINT at whichever model the client already pays for."
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={{ JSON.stringify({ idempotencyKey: 'brief-' + $('Fetch next brief').item.json.id, kind: $('Fetch next brief').item.json.kind || 'image', caption: ($json.content?.[0]?.text || $json.choices?.[0]?.message?.content || '').trim(), media: $('Fetch next brief').item.json.media_urls, approved: false }) }}",
+        "options": {}
+      },
+      "id": "shape",
+      "name": "Shape post",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [340, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CASCADE_URL }}/api/posts",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-cascade-key", "value": "={{ $env.CASCADE_API_KEY }}" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "create-draft",
+      "name": "Create draft in Cascade",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [560, 200],
+      "notes": "The idempotency key means a re-run of this workflow updates the same draft instead of creating a duplicate post."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APPROVAL_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: 'Draft ready for review: ' + $json.post.id, caption: $('Shape post').item.json.caption, approve_url: $env.CASCADE_URL + '/api/posts/' + $json.post.id + '/approve' }) }}",
+        "options": {}
+      },
+      "id": "notify",
+      "name": "Ask a human to approve",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [780, 200],
+      "notes": "Slack, Telegram or WhatsApp. A generated caption never publishes itself: one human tap stands between the model and the brand's feed."
+    }
+  ],
+  "connections": {
+    "Every 4 hours": { "main": [[{ "node": "Fetch next brief", "type": "main", "index": 0 }]] },
+    "Fetch next brief": { "main": [[{ "node": "Has media?", "type": "main", "index": 0 }]] },
+    "Has media?": { "main": [[{ "node": "Draft caption", "type": "main", "index": 0 }], []] },
+    "Draft caption": { "main": [[{ "node": "Shape post", "type": "main", "index": 0 }]] },
+    "Shape post": { "main": [[{ "node": "Create draft in Cascade", "type": "main", "index": 0 }]] },
+    "Create draft in Cascade": { "main": [[{ "node": "Ask a human to approve", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "tags": ["cascade"]
+}

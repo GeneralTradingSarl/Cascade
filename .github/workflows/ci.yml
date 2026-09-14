@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  workflows:
+    name: n8n workflows parse
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Validate every workflow file
+        run: |
+          for file in workflows/*.json; do
+            node -e "const w=require('./$file'); if(!w.nodes?.length||!w.connections) { console.error('$file is not a usable n8n workflow'); process.exit(1); } console.log('$file: '+w.nodes.length+' nodes')"
+          done

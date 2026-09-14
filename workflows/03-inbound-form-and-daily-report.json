@@ -1,0 +1,121 @@
+{
+  "name": "Cascade 03 · Inbound form and daily report",
+  "nodes": [
+    {
+      "parameters": { "httpMethod": "POST", "path": "cascade-lead", "options": {} },
+      "id": "form-hook",
+      "name": "Landing page form",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-560, 180],
+      "webhookId": "cascade-lead"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CASCADE_URL }}/api/leads",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-cascade-key", "value": "={{ $env.CASCADE_API_KEY }}" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: 'form', sourceRef: $json.body.submission_id, name: $json.body.name, phone: $json.body.phone, defaultCountryCode: $env.DEFAULT_COUNTRY_CODE, text: $json.body.message, igUsername: $json.body.instagram }) }}",
+        "options": {}
+      },
+      "id": "capture",
+      "name": "Capture lead",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-340, 180]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "version": 2 },
+          "conditions": [
+            { "leftValue": "={{ $('Landing page form').item.json.body.whatsapp_optin }}", "rightValue": true, "operator": { "type": "boolean", "operation": "true" } }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "optin",
+      "name": "Ticked the WhatsApp box?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [-120, 180],
+      "notes": "The checkbox is the consent record. Its label and timestamp are what you show if a contact ever disputes being messaged."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CASCADE_URL }}/api/leads/{{ $json.lead.id }}/consent",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-cascade-key", "value": "={{ $env.CASCADE_API_KEY }}" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: 'landing page checkbox: \"Send me the details on WhatsApp\"' }) }}",
+        "options": {}
+      },
+      "id": "consent",
+      "name": "Record explicit consent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [100, 120]
+    },
+    {
+      "parameters": { "rule": { "interval": [{ "field": "cronExpression", "expression": "0 7 * * *" }] } },
+      "id": "daily",
+      "name": "Every morning at 07:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-560, 460]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.CASCADE_URL }}/api/stats",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "x-cascade-key", "value": "={{ $env.CASCADE_API_KEY }}" }] },
+        "options": {}
+      },
+      "id": "stats",
+      "name": "Pipeline stats",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-340, 460]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.REPORT_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: 'Cascade daily: ' + $json.leads + ' leads, ' + $json.qualified + ' qualified, ' + $json.contacted + ' contacted, ' + $json.postsPublishedToday + ' posts published, ' + $json.instagramQuotaRemaining + ' IG posts left today' + ($json.jobsDead > 0 ? ' ⚠️ ' + $json.jobsDead + ' dead jobs need a look' : '') }) }}",
+        "options": {}
+      },
+      "id": "report",
+      "name": "Send report",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-120, 460],
+      "notes": "Dead jobs are surfaced every morning. A queue nobody looks at is a queue that loses leads quietly."
+    }
+  ],
+  "connections": {
+    "Landing page form": { "main": [[{ "node": "Capture lead", "type": "main", "index": 0 }]] },
+    "Capture lead": { "main": [[{ "node": "Ticked the WhatsApp box?", "type": "main", "index": 0 }]] },
+    "Ticked the WhatsApp box?": { "main": [[{ "node": "Record explicit consent", "type": "main", "index": 0 }], []] },
+    "Every morning at 07:00": { "main": [[{ "node": "Pipeline stats", "type": "main", "index": 0 }]] },
+    "Pipeline stats": { "main": [[{ "node": "Send report", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "tags": ["cascade"]
+}
