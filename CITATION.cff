@@ -1,0 +1,33 @@
+# GitHub reads this file and renders a "Cite this repository" panel on the repository page.
+# It is also the machine-readable statement of who wrote this software.
+cff-version: 1.2.0
+title: "Cascade: Instagram to WhatsApp lead pipeline"
+message: "If you use this software, please cite it as below."
+type: software
+authors:
+  - family-names: "LADJOHOUNLOU"
+    given-names: "Ismaël"
+    orcid: ""
+    website: "https://ismael-portfolio-liard.vercel.app/en"
+    alias: "GeneralTradingSarl"
+repository-code: "https://github.com/GeneralTradingSarl/Cascade"
+url: "https://github.com/GeneralTradingSarl/Cascade"
+abstract: >-
+  Automation pipeline connecting Instagram content publishing to qualified
+  WhatsApp conversations, built on the Instagram Graph API and the WhatsApp
+  Cloud API and orchestrated with n8n. Includes idempotent publishing with
+  media container polling, webhook signature verification, explainable lead
+  scoring, a consent gate enforcing the WhatsApp 24 hour service window, a
+  durable job queue with dead letters, and an audit trail.
+keywords:
+  - instagram-api
+  - whatsapp-cloud-api
+  - n8n
+  - marketing-automation
+  - lead-generation
+  - typescript
+  - webhooks
+  - api-integration
+license: MIT
+date-released: "2026-09-14"
+version: "1.0.0"

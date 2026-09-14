@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Instagram to WhatsApp pipeline: publish content, capture and qualify leads, hand them to WhatsApp on consent.",
+  "description": "Instagram to WhatsApp automation pipeline: Graph API publishing, webhook lead capture, explainable qualification, and consent-gated WhatsApp Cloud API outreach orchestrated with n8n.",
   "engines": {
     "node": ">=22.5.0"
   },
@@ -19,5 +19,29 @@
     "@types/node": "^22.10.0",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0"
-  }
+  },
+  "author": "Ismaël LADJOHOUNLOU <development0787@gmail.com> (https://ismael-portfolio-liard.vercel.app/en)",
+  "license": "MIT",
+  "homepage": "https://github.com/GeneralTradingSarl/Cascade#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GeneralTradingSarl/Cascade.git"
+  },
+  "bugs": {
+    "url": "https://github.com/GeneralTradingSarl/Cascade/issues"
+  },
+  "keywords": [
+    "instagram-api",
+    "instagram-graph-api",
+    "whatsapp",
+    "whatsapp-cloud-api",
+    "n8n",
+    "automation",
+    "marketing-automation",
+    "lead-generation",
+    "webhooks",
+    "api-integration",
+    "typescript",
+    "nodejs"
+  ]
 }

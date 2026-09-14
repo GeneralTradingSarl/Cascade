@@ -1,4 +1,6 @@
-# Cascade
+# Cascade — Instagram to WhatsApp automation pipeline
+
+**Built by [Ismaël LADJOHOUNLOU](https://ismael-portfolio-liard.vercel.app/en)** · Instagram Graph API · WhatsApp Cloud API · n8n · TypeScript
 
 An Instagram to WhatsApp pipeline that a business can actually run: publish content, capture
 the people who react to it, qualify them, and hand the good ones to WhatsApp **only when
@@ -112,6 +114,23 @@ Those are the fastest ways to lose the assets the business is built on. See
 [docs/COMPLIANCE.md](docs/COMPLIANCE.md) for the rules this follows and what the platforms do
 when you do not.
 
+## Author
+
+**Ismaël LADJOHOUNLOU** — data engineer, algorithmic trading and automation developer.
+I build systems that run unattended: external APIs that fail, retries that must not
+duplicate, state that has to survive a crash.
+
+- Portfolio: <https://ismael-portfolio-liard.vercel.app/en>
+- GitHub: <https://github.com/GeneralTradingSarl>
+- Upwork: <https://www.upwork.com/freelancers/~01498331f7c7800fc0>
+- Other work: [QuantSwap](https://github.com/GeneralTradingSarl/QuantSwap) (constant product
+  DEX: Solidity, reorg-safe indexer, Next.js) and
+  [QuantSphere Terminal](https://github.com/GeneralTradingSarl/quantsphere-terminal)
+  (C++20 quantitative finance engine)
+
+Available for automation and integration work. If something here is useful to you, an issue
+or a message is welcome.
+
 ## Licence
 
-MIT.
+MIT © 2026 Ismaël LADJOHOUNLOU. See [LICENSE](LICENSE).
